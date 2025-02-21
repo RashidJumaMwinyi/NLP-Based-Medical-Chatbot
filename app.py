@@ -21,7 +21,7 @@ with st.sidebar:
     st.write("This chatbot answers medical-related questions based on a pre-trained model.")
 
     # Download the dataset from Google Drive if it doesn't exist
-    dataset_path = "dataset.csv"
+    dataset_path = "chatbot_data/dataset.csv"
     if not os.path.exists(dataset_path):
         st.write("Downloading the dataset...")
         dataset_url ="https://drive.google.com/uc?export=download&id=1A2B3C4D5E6F7G8H9I0J"  # Replace with your dataset FILE_ID
