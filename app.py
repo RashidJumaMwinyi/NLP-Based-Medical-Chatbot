@@ -7,6 +7,7 @@ from langchain.chains import ConversationalRetrievalChain
 from langchain.prompts import PromptTemplate
 import gdown
 import os
+import zipfile
 import logging
 
 # Fix for sqlite3 version issue
@@ -31,8 +32,8 @@ with st.sidebar:
     st.write("This chatbot answers medical-related questions based on a pre-trained model.")
 
     # Get file IDs from environment variables
-    dataset_file_id = st.secrets["DATASET_FILE_ID"]
-    model_file_id = st.secrets["MODEL_FILE_ID"]
+    dataset_file_id = "1A2B3C4D5E6F7G8H9I0J"  # Replace with your dataset file ID
+    model_folder_zip_id = "1sziMRE691psjZEYZaudz0Y8Jg0lX59PF"  # Replace with your model folder .zip file ID
 
     # Download the dataset from Google Drive if it doesn't exist
     dataset_path = "dataset.csv"
@@ -47,18 +48,24 @@ with st.sidebar:
             logger.error(f"Failed to download the dataset: {e}")
             st.error(f"Failed to download the dataset: {e}")
 
-    # Download the model from Google Drive if it doesn't exist
-    model_path = "medical_chatbot_model"
-    if not os.path.exists(model_path):
-        st.write("Downloading the model...")
-        model_url = f"https://drive.google.com/uc?export=download&id={model_file_id}"
+    # Download the model folder as a .zip file and extract it
+    model_folder_path = "medical_chatbot_model"
+    if not os.path.exists(model_folder_path):
+        st.write("Downloading the model folder...")
+        model_folder_zip_url = f"https://drive.google.com/uc?export=download&id={model_folder_zip_id}"
         try:
-            logger.info("Downloading model...")
-            gdown.download(model_url, model_path, quiet=False)
-            st.success("Model downloaded successfully!")
+            logger.info("Downloading model folder...")
+            gdown.download(model_folder_zip_url, "model_folder.zip", quiet=False)
+            st.success("Model folder downloaded successfully!")
+
+            # Extract the .zip file
+            logger.info("Extracting model folder...")
+            with zipfile.ZipFile("model_folder.zip", "r") as zip_ref:
+                zip_ref.extractall(model_folder_path)
+            st.success("Model folder extracted successfully!")
         except Exception as e:
-            logger.error(f"Failed to download the model: {e}")
-            st.error(f"Failed to download the model: {e}")
+            logger.error(f"Failed to download or extract the model folder: {e}")
+            st.error(f"Failed to download or extract the model folder: {e}")
 
 # Load the dataset and initialize components
 @st.cache_resource
@@ -81,14 +88,15 @@ def load_data_and_model():
     retriever = vectorstore.as_retriever()
 
     # Load the pre-trained T5 model and tokenizer
-    if not os.path.exists("medical_chatbot_model"):
-        logger.error("Model not found. Please ensure it is downloaded.")
-        st.error("Model not found. Please ensure it is downloaded.")
+    model_folder_path = "medical_chatbot_model"
+    if not os.path.exists(model_folder_path):
+        logger.error("Model folder not found. Please ensure it is downloaded and extracted.")
+        st.error("Model folder not found. Please ensure it is downloaded and extracted.")
         st.stop()
 
     logger.info("Loading model and tokenizer...")
-    model = T5ForConditionalGeneration.from_pretrained("medical_chatbot_model")
-    tokenizer = T5Tokenizer.from_pretrained("medical_chatbot_model")
+    model = T5ForConditionalGeneration.from_pretrained(model_folder_path)
+    tokenizer = T5Tokenizer.from_pretrained(model_folder_path)
 
     # Define the prompt template
     prompt_template = """
