@@ -11,10 +11,6 @@ import os
 # Set page config FIRST
 st.set_page_config(page_title="Medical Chatbot", page_icon="💬", layout="wide")
 
-# Debugging: Print installed libraries
-st.write("Installed libraries:")
-st.write(os.popen("pip list").read())
-
 # Step 1: Download Dataset and Model from Google Drive
 def download_from_drive():
     # Google Drive file IDs
@@ -25,30 +21,21 @@ def download_from_drive():
     dataset_url = f"https://drive.google.com/uc?id={dataset_file_id}"
     dataset_path = "dataset.csv"
     if not os.path.exists(dataset_path):
-        try:
+        with st.spinner('Downloading dataset...'):
             gdown.download(dataset_url, dataset_path, quiet=False)
-            st.success("Dataset downloaded successfully!")
-        except Exception as e:
-            st.error(f"Failed to download dataset: {e}")
-            st.stop()
+        st.success("Dataset downloaded successfully!")
 
-    # Download model (assuming it's a zip file)
-    model_url = f"https://drive.google.com/uc?id={model_file_id}"
-    model_zip_path = "medical_chatbot_model.zip"
+    # Download model
     model_dir = "medical_chatbot_model"
     if not os.path.exists(model_dir):
-        try:
-            gdown.download(model_url, model_zip_path, quiet=False)
-            st.success("Model downloaded successfully!")
+        with st.spinner('Downloading model...'):
+            gdown.download(f"https://drive.google.com/uc?id={model_file_id}", "medical_chatbot_model.zip", quiet=False)
             # Unzip the model
             import zipfile
-            with zipfile.ZipFile(model_zip_path, 'r') as zip_ref:
+            with zipfile.ZipFile("medical_chatbot_model.zip", 'r') as zip_ref:
                 zip_ref.extractall(model_dir)
-            os.remove(model_zip_path)  # Clean up the zip file
-            st.success("Model extracted successfully!")
-        except Exception as e:
-            st.error(f"Failed to download or extract model: {e}")
-            st.stop()
+            os.remove("medical_chatbot_model.zip")  # Clean up the zip file
+        st.success("Model downloaded and extracted successfully!")
 
 # Step 2: Initialize Embeddings and VectorStore
 @st.cache_resource
@@ -60,15 +47,10 @@ def initialize_vectorstore(queries):
 # Step 3: Load the Pre-trained T5 Model and Tokenizer
 @st.cache_resource
 def load_model_and_tokenizer():
-    model_dir = "medical_chatbot_model"  # Ensure this path is correct
-    try:
-        model = T5ForConditionalGeneration.from_pretrained(model_dir)
-        tokenizer = T5Tokenizer.from_pretrained(model_dir)
-        st.success("Model and tokenizer loaded successfully!")
-        return model, tokenizer
-    except Exception as e:
-        st.error(f"Failed to load model and tokenizer: {e}")
-        st.stop()
+    model_dir = "medical_chatbot_model"
+    model = T5ForConditionalGeneration.from_pretrained(model_dir)
+    tokenizer = T5Tokenizer.from_pretrained(model_dir)
+    return model, tokenizer
 
 # Step 4: Define the Prompt Template
 def create_prompt_template():
