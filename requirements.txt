@@ -111,7 +111,7 @@ tenacity
 threadpoolctl
 tokenizers
 toml
-torch==2.0.1
+torch
 tqdm
 transformers
 triton
