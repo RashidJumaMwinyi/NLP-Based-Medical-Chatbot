@@ -12,6 +12,7 @@ cachetools
 chroma-hnswlib
 chromadb
 click
+faiss-cpu
 coloredlogs
 dataclasses-json
 Deprecated
@@ -110,7 +111,7 @@ tenacity
 threadpoolctl
 tokenizers
 toml
-torch
+torch==2.0.1
 tqdm
 transformers
 triton
