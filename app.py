@@ -32,52 +32,68 @@ with st.sidebar:
     st.write("This chatbot answers medical-related questions based on a pre-trained model.")
 
     # Get file IDs from environment variables
-    dataset_file_id = "1A2B3C4D5E6F7G8H9I0J"  # Replace with your dataset file ID
-    model_folder_zip_id = "1sziMRE691psjZEYZaudz0Y8Jg0lX59PF"  # Replace with your model folder .zip file ID
+    dataset_file_id = st.secrets.get("DATASET_FILE_ID")
+    model_file_id = st.secrets.get("MODEL_FILE_ID")
 
-    # Download the dataset from Google Drive if it doesn't exist
+    if not dataset_file_id or not model_file_id:
+        st.error("Dataset or Model File ID not found. Ensure `secrets.toml` is correctly set.")
+        st.stop()
+
+    # Print File IDs for debugging
+    st.write(f"Dataset File ID: `{dataset_file_id}`")
+    st.write(f"Model File ID: `{model_file_id}`")
+
+    # Download Dataset
     dataset_path = "dataset.csv"
     if not os.path.exists(dataset_path):
         st.write("Downloading the dataset...")
-        dataset_url = f"https://drive.google.com/uc?export=download&id={dataset_file_id}"
+        dataset_url = f"https://drive.google.com/uc?id={dataset_file_id}"
         try:
             logger.info("Downloading dataset...")
-            gdown.download(dataset_url, dataset_path, quiet=False)
-            st.success("Dataset downloaded successfully!")
+            gdown.download(dataset_url, dataset_path, fuzzy=True, quiet=False)
+            if os.path.exists(dataset_path):
+                st.success("Dataset downloaded successfully!")
+            else:
+                raise Exception("Dataset download failed. Check file permissions.")
         except Exception as e:
-            logger.error(f"Failed to download the dataset: {e}")
-            st.error(f"Failed to download the dataset: {e}")
+            logger.error(f"Failed to download dataset: {e}")
+            st.error(f"Failed to download dataset: {e}")
 
-    # Download the model folder as a .zip file and extract it
-    model_folder_path = "medical_chatbot_model"
-    if not os.path.exists(model_folder_path):
-        st.write("Downloading the model folder...")
-        model_folder_zip_url = f"https://drive.google.com/uc?export=download&id={model_folder_zip_id}"
+    # Download and Extract Model
+    model_zip_path = "medical_chatbot_model.zip"
+    model_dir = "medical_chatbot_model"
+    
+    if not os.path.exists(model_dir):
+        st.write("Downloading the model...")
+        model_url = f"https://drive.google.com/uc?id={model_file_id}"
         try:
-            logger.info("Downloading model folder...")
-            gdown.download(model_folder_zip_url, "model_folder.zip", quiet=False)
-            st.success("Model folder downloaded successfully!")
+            logger.info("Downloading model...")
+            gdown.download(model_url, model_zip_path, fuzzy=True, quiet=False)
 
-            # Extract the .zip file
-            logger.info("Extracting model folder...")
-            with zipfile.ZipFile("model_folder.zip", "r") as zip_ref:
-                zip_ref.extractall(model_folder_path)
-            st.success("Model folder extracted successfully!")
+            # Extract model if it's a ZIP file
+            if zipfile.is_zipfile(model_zip_path):
+                st.write("Extracting model files...")
+                with zipfile.ZipFile(model_zip_path, "r") as zip_ref:
+                    zip_ref.extractall(model_dir)
+                os.remove(model_zip_path)  # Cleanup ZIP file after extraction
+                st.success("Model downloaded and extracted successfully!")
+            else:
+                raise Exception("Model file is not a valid ZIP. Ensure correct file format.")
         except Exception as e:
-            logger.error(f"Failed to download or extract the model folder: {e}")
-            st.error(f"Failed to download or extract the model folder: {e}")
+            logger.error(f"Failed to download or extract model: {e}")
+            st.error(f"Failed to download or extract model: {e}")
 
 # Load the dataset and initialize components
 @st.cache_resource
 def load_data_and_model():
     # Load dataset
-    if not os.path.exists("dataset.csv"):
+    if not os.path.exists(dataset_path):
         logger.error("Dataset not found. Please ensure it is downloaded.")
         st.error("Dataset not found. Please ensure it is downloaded.")
         st.stop()
 
     logger.info("Loading dataset...")
-    df = pd.read_csv("dataset.csv")
+    df = pd.read_csv(dataset_path)
     df.dropna(subset=["input_text", "target_text"], inplace=True)
     queries = df["input_text"].tolist()
 
@@ -88,15 +104,14 @@ def load_data_and_model():
     retriever = vectorstore.as_retriever()
 
     # Load the pre-trained T5 model and tokenizer
-    model_folder_path = "medical_chatbot_model"
-    if not os.path.exists(model_folder_path):
-        logger.error("Model folder not found. Please ensure it is downloaded and extracted.")
-        st.error("Model folder not found. Please ensure it is downloaded and extracted.")
+    if not os.path.exists(model_dir):
+        logger.error("Model not found. Please ensure it is downloaded.")
+        st.error("Model not found. Please ensure it is downloaded.")
         st.stop()
 
     logger.info("Loading model and tokenizer...")
-    model = T5ForConditionalGeneration.from_pretrained(model_folder_path)
-    tokenizer = T5Tokenizer.from_pretrained(model_folder_path)
+    model = T5ForConditionalGeneration.from_pretrained(model_dir)
+    tokenizer = T5Tokenizer.from_pretrained(model_dir)
 
     # Define the prompt template
     prompt_template = """
