@@ -8,6 +8,9 @@ from langchain.prompts import PromptTemplate
 import gdown
 import os
 
+# Set page config FIRST
+st.set_page_config(page_title="Medical Chatbot", page_icon="💬", layout="wide")
+
 # Debugging: Print installed libraries
 st.write("Installed libraries:")
 st.write(os.popen("pip list").read())
@@ -91,7 +94,6 @@ def initialize_qa_chain(model, retriever, prompt):
 
 # Streamlit App
 def main():
-    st.set_page_config(page_title="Medical Chatbot", page_icon="💬", layout="wide")
     st.title("Medical Chatbot")
     st.write("Ask any medical-related question below:")
 
